@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Игра "Дурак" на PyScript (Полный цикл)</title>
+  
+  <!-- Подключаем PyScript -->
+  <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+  <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+
+  <!-- Небольшой CSS для стиля -->
+  <style>
+    body {
+      margin: 0; 
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      background: #3f51b5;
+      color: white;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .container {
+      background: white;
+      width: 600px;
+      max-width: 90%;
+      margin: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    button {
+      background: #3f51b5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      margin: 0.5rem 0;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #32408f;
+    }
+    /* Прячем эти блоки до переключения в коде */
+    #menu-container, #game-container, #end-container {
+      display: none;
+    }
+    label {
+      margin-right: 1rem;
+    }
+    #log-area {
+      white-space: pre-wrap;
+      background: #f8f8f8;
+      padding: 1rem;
+      min-height: 200px;
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9rem;
+    }
+    .section-title {
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Игра "Дурак" (Полный цикл, PyScript)</h1>
+</header>
+
+<!-- БЛОК 1: Главное меню -->
+<div class="container" id="menu-container">
+  <h2>Главное меню</h2>
+  <div>
+    <label>
+      Режим игры:
+      <select id="select_mode">
+        <option value="classic">classic</option>
+        <option value="podkidnoi">podkidnoi</option>
+        <option value="perevodnoi">perevodnoi</option>
+        <option value="jokers">jokers</option>
+        <option value="all">all</option>
+      </select>
+    </label>
+    <label>
+      <input type="checkbox" id="cb_6plus" />
+      Только 6..A
+    </label>
+    <label>
+      <input type="checkbox" id="cb_jokers" />
+      С джокерами
+    </label>
+    <br />
+    <label>
+      Кол-во игроков (2..4):
+      <input type="number" id="num_players" value="2" min="2" max="4" style="width:50px;" />
+    </label>
+  </div>
+  <p>
+    Все игроки, кроме игрока 1, будут управляться ИИ (автоматический выбор).
+    Можно доработать мультиплеер позже, когда механики будут готовы.
+  </p>
+
+  <!-- Вместо addEventListener используем py-click -->
+  <button py-click="start_game">Начать игру</button>
+</div>
+
+<!-- БЛОК 2: Экран игры -->
+<div class="container" id="game-container">
+  <h2>Игра началась!</h2>
+  <p class="section-title">Козырь: <span id="span_trump_suit"></span></p>
+  <p class="section-title">Ход текущего раунда:</p>
+  <div>
+    <!-- Тоже py-click -->
+    <button py-click="do_next_round">Сделать шаг (атака/защита)</button>
+  </div>
+  <div class="section-title">Состояние игры:</div>
+  <div id="log-area"></div>
+  <button py-click="give_up">Выйти в меню</button>
+</div>
+
+<!-- БЛОК 3: Окончание игры -->
+<div class="container" id="end-container">
+  <h2>Игра завершена</h2>
+  <p id="end-message"></p>
+  <button py-click="return_menu">Вернуться в меню</button>
+</div>
+
+<!-- Основной PyScript-код: логика и управление интерфейсом -->
+<py-script>
+#########################################################
+#                ПОЛНАЯ МЕХАНИКА ИГРЫ "ДУРАК"
+#         + Пошаговое выполнение (полный цикл)
+#         + ИИ (остальные игроки кроме игрока 1)
+#         + Окончание игры и возвращение в меню
+#         + py-click вместо addEventListener
+#########################################################
+
+import random
+from js import document
+
+# --- Режимы ---
+MODE_CLASSIC    = "classic"
+MODE_PODKIDNOI  = "podkidnoi"
+MODE_PEREVODNOI = "perevodnoi"
+MODE_JOKERS     = "jokers"
+MODE_ALL        = "all"
+
+# --- Классы: Card, Deck, GameRules ---
+class Card:
+    def __init__(self, rank, suit, is_joker=False):
+        self.rank = rank
+        self.suit = suit
+        self.is_joker = is_joker
+
+    def __repr__(self):
+        if self.is_joker:
+            return f"[Joker: {self.rank}]"
+        else:
+            return f"[{self.rank} {self.suit}]"
+
+class Deck:
+    FULL_RANKS = [str(n) for n in range(2, 11)] + ["J", "Q", "K", "A"]
+    SUITS = ["♠", "♥", "♦", "♣", "⭐", "🌙", "⚜"]
+    JOKERS = ["Joker-3", "Joker-4"]
+
+    def __init__(self, mode=MODE_CLASSIC, ranks_from_6=False, with_jokers=False):
+        self.mode = mode
+        self.ranks_from_6 = ranks_from_6
+        self.with_jokers = with_jokers
+        self.cards = self._create_filtered_deck()
+
+    def _create_filtered_deck(self):
+        if self.ranks_from_6:
+            possible_ranks = [r for r in self.FULL_RANKS if r not in ['2','3','4','5']]
+        else:
+            possible_ranks = self.FULL_RANKS[:]
+
+        normal_cards = []
+        for suit in self.SUITS:
+            for rank in possible_ranks:
+                normal_cards.append(Card(rank, suit, is_joker=False))
+
+        joker_cards = []
+        if self.with_jokers:
+            for j in self.JOKERS:
+                joker_cards.append(Card(rank=j, suit="JokerSuit", is_joker=True))
+
+        return normal_cards + joker_cards
+
+    def shuffle_deck(self):
+        random.shuffle(self.cards)
+
+    def draw_card(self):
+        if self.cards:
+            return self.cards.pop(0)
+        return None
+
+class GameRules:
+    def __init__(self, mode=MODE_CLASSIC):
+        self.mode = mode
+        self.rank_order = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+        self.trump_suit = None
+
+    def set_trump_suit(self, suit):
+        self.trump_suit = suit
+
+    def is_card_higher(self, card1, card2):
+        # card1 защищается
+        if card1.is_joker:
+            if self.mode in [MODE_JOKERS, MODE_ALL]:
+                if card2.is_joker:
+                    return False
+                else:
+                    return True
+            else:
+                return False
+
+        if card2.is_joker and self.mode in [MODE_JOKERS, MODE_ALL]:
+            return False
+
+        c1_trump = (card1.suit == self.trump_suit)
+        c2_trump = (card2.suit == self.trump_suit)
+
+        if c1_trump and not c2_trump:
+            return True
+        if not c1_trump and c2_trump:
+            return False
+
+        if card1.suit == card2.suit:
+            r1_index = self.rank_order.index(card1.rank) if card1.rank in self.rank_order else -1
+            r2_index = self.rank_order.index(card2.rank) if card2.rank in self.rank_order else -1
+            return r1_index > r2_index
+        else:
+            return False
+
+    def check_defend(self, defending_card, attacking_card):
+        return self.is_card_higher(defending_card, attacking_card)
+
+
+# --- Игрок (ИИ) ---
+class AIPlayer:
+    """
+    Простой ИИ: при атаке - берёт первую карту,
+                при защите - ищет первую, которая бьёт атакующую.
+    """
+    def __init__(self, player_id):
+        self.player_id = player_id
+
+    def choose_attack_card(self, cards):
+        if not cards:
+            return None, -1
+        return cards[0], 0
+
+    def choose_defend_card(self, cards, attack_card, rules):
+        for i, c in enumerate(cards):
+            if rules.check_defend(c, attack_card):
+                return c, i
+        return None, -1
+
+
+class GameSession:
+    """
+    Полный цикл "Дурака" (упрощённо) + пошаговый метод do_round() для одного хода.
+    """
+    def __init__(self, mode=MODE_CLASSIC, num_players=2, ranks_from_6=False, with_jokers=False):
+        self.mode = mode
+        self.num_players = num_players
+        self.deck = Deck(mode, ranks_from_6, with_jokers)
+        self.deck.shuffle_deck()
+        self.rules = GameRules(mode)
+        self.rules.set_trump_suit(random.choice(Deck.SUITS))
+
+        self.players_hands = [[] for _ in range(num_players)]
+
+        self.players = []
+        for pid in range(num_players):
+            self.players.append(AIPlayer(pid))
+
+        # Раздаём по 6 карт
+        for p in range(num_players):
+            for _ in range(6):
+                c = self.deck.draw_card()
+                if c:
+                    self.players_hands[p].append(c)
+
+        self.active_players = set(range(num_players))
+        self.current_attacker = 0
+        self.current_defender = (self.current_attacker + 1) % num_players if num_players > 1 else None
+
+        self.log_messages = []
+        self.log(f"Игра началась. Козырь: {self.rules.trump_suit}, Игроков: {num_players}")
+
+    def log(self, txt):
+        self.log_messages.append(txt)
+
+    def get_log_text(self):
+        return "\n".join(self.log_messages)
+
+    def do_round(self):
+        """
+        Проводим один ход (атака/защита).
+        """
+        if self.current_defender is None or self.current_defender not in self.active_players:
+            self.log("Нет защитника или он вышел.")
+            return
+
+        # Если у атакующего нет карт
+        if not self.players_hands[self.current_attacker]:
+            self.log(f"Игрок {self.current_attacker+1} не может атаковать (нет карт).")
+            self._choose_next_attacker()
+            return
+
+        atk_player = self.players[self.current_attacker]
+        atk_card, atk_idx = atk_player.choose_attack_card(self.players_hands[self.current_attacker])
+        if not atk_card:
+            self.log(f"Игрок {self.current_attacker+1} пасует.")
+            self._choose_next_attacker()
+            return
+
+        self.players_hands[self.current_attacker].pop(atk_idx)
+        self.log(f"Игрок {self.current_attacker+1} атакует картой {atk_card}")
+
+        def_player = self.players[self.current_defender]
+        def_card, def_idx = def_player.choose_defend_card(self.players_hands[self.current_defender], atk_card, self.rules)
+        if not def_card:
+            self.log(f"Игрок {self.current_defender+1} НЕ отбился и берёт карту {atk_card} к себе.")
+            self.players_hands[self.current_defender].append(atk_card)
+        else:
+            self.players_hands[self.current_defender].pop(def_idx)
+            if self.rules.check_defend(def_card, atk_card):
+                self.log(f"Игрок {self.current_defender+1} отбился картой {def_card}. Карты ушли в сброс.")
+                self.current_attacker = self.current_defender
+                self._choose_next_defender()
+            else:
+                self.log(f"Игрок {self.current_defender+1} НЕ смог отбить картой {def_card}. Берёт обе карты.")
+                self.players_hands[self.current_defender].append(atk_card)
+                self.players_hands[self.current_defender].append(def_card)
+
+        self._draw_cards_in_order()
+        self._check_exit_players()
+
+    def _choose_next_attacker(self):
+        ap = sorted(list(self.active_players))
+        if self.current_attacker in ap:
+            idx = ap.index(self.current_attacker)
+            idx_next = (idx + 1) % len(ap)
+            self.current_attacker = ap[idx_next]
+        else:
+            self.current_attacker = ap[0]
+        self._choose_next_defender()
+
+    def _choose_next_defender(self):
+        ap = sorted(list(self.active_players))
+        if len(ap) < 2:
+            self.current_defender = None
+            return
+        idx_atk = ap.index(self.current_attacker)
+        idx_def = (idx_atk + 1) % len(ap)
+        self.current_defender = ap[idx_def]
+
+    def _draw_cards_in_order(self):
+        if self.current_defender is None:
+            return
+        order = [self.current_attacker, self.current_defender]
+        others = [p for p in range(self.num_players) if p not in order]
+        full_order = order + others
+        for pid in full_order:
+            if pid in self.active_players:
+                while len(self.players_hands[pid]) < 6 and self.deck.cards:
+                    c = self.deck.draw_card()
+                    self.players_hands[pid].append(c)
+
+    def _check_exit_players(self):
+        for p in list(self.active_players):
+            if len(self.players_hands[p]) == 0:
+                self.active_players.remove(p)
+                self.log(f"Игрок {p+1} сбросил все карты и выходит.")
+
+    def is_game_over(self):
+        return len(self.active_players) < 2
+
+    def get_winner_text(self):
+        if len(self.active_players) == 0:
+            return "Все игроки сбросили карты одновременно! Все победили!"
+        elif len(self.active_players) == 1:
+            loser = list(self.active_players)[0]
+            return f"Игрок {loser+1} остался один (с картами) и проиграл. Остальные победили!"
+        else:
+            return "Игра ещё продолжается."
+
+
+#########################################################
+#            ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ФУНКЦИИ
+#########################################################
+session = None
+game_state = "menu"
+
+def switch_view(new_state):
+    global game_state
+    game_state = new_state
+
+    # Получаем блоки из DOM
+    menu_div = document.getElementById("menu-container")
+    game_div = document.getElementById("game-container")
+    end_div = document.getElementById("end-container")
+
+    # Скрываем все
+    menu_div.style.display = "none"
+    game_div.style.display = "none"
+    end_div.style.display = "none"
+
+    # Показываем нужный
+    if new_state == "menu":
+        menu_div.style.display = "block"
+    elif new_state == "playing":
+        game_div.style.display = "block"
+    elif new_state == "end":
+        end_div.style.display = "block"
+
+def start_game():
+    """
+    Читаем настройки из DOM,
+    создаём GameSession,
+    переходим к экрану 'playing'.
+    """
+    global session
+    mode_sel = document.getElementById("select_mode").value
+    only_6 = document.getElementById("cb_6plus").checked
+    jokers_on = document.getElementById("cb_jokers").checked
+    n = int(document.getElementById("num_players").value)
+    if n < 2: n = 2
+    if n > 4: n = 4
+
+    # Создаём сессию
+    session = GameSession(mode_sel, n, only_6, jokers_on)
+
+    # Меняем экран
+    switch_view("playing")
+
+    # Показываем козырь
+    trump_span = document.getElementById("span_trump_suit")
+    trump_span.innerHTML = session.rules.trump_suit
+
+    render_log()
+
+def render_log():
+    """
+    Показываем журнал ходов в #log-area
+    """
+    global session
+    log_div = document.getElementById("log-area")
+    if session:
+        log_div.innerHTML = session.get_log_text()
+    else:
+        log_div.innerHTML = "Нет текущей игры"
+
+def do_next_round():
+    """
+    Совершаем один "шаг" (атака/защита),
+    проверяем конец игры.
+    """
+    global session
+    if not session:
+        return
+    session.do_round()
+
+    if session.is_game_over():
+        switch_view("end")
+        end_msg = document.getElementById("end-message")
+        end_msg.innerHTML = session.get_winner_text()
+        render_log()
+        return
+
+    render_log()
+
+def give_up():
+    """
+    Прерываем игру, возвращаемся в меню.
+    """
+    global session
+    session = None
+    switch_view("menu")
+
+def return_menu():
+    """
+    После окончания - вернуться в меню.
+    """
+    global session
+    session = None
+    switch_view("menu")
+
+
+# При загрузке покажем меню
+switch_view("menu")
+
+print("PyScript: Игра 'Дурак' загружена.")
+</py-script>
+
+</body>
+</html>
