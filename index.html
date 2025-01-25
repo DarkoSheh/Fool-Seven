@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Моя Игра (Brython) — Несколько ИИ (3–4 игроков), зелёное поле + карточный дизайн</title>
+  <title>Моя Игра (Brython) — Несколько ИИ (3–4 игроков), зелёное поле + козырь</title>
 
   <!-- Подключаем Brython -->
   <script src="https://cdn.jsdelivr.net/npm/brython@3/brython.min.js"></script>
@@ -57,35 +57,27 @@
       display: none;
     }
 
-    /* --- Зеленое поле игры --- */
+    /* Зелёное поле */
     .game-field {
-      background: #2e7d32; /* приятный зелёный */
-      color: #fff; /* текст на зелёном поле */
-      position: relative; /* для вложенных элементов */
-      min-height: 600px; /* примерная высота */
+      background: #2e7d32; /* зелёный фон */
+      color: #fff;
+      position: relative;
+      min-height: 600px;
     }
 
-    /* Кнопки (или “карты”) игрока при выборе */
-    .card-item {
-      background: #fff; 
-      border: 2px solid #ccc;
-      border-radius: 10px;
-      padding: 0.3rem 0.5rem;
-      cursor: pointer;
-      margin: 0.3rem;
-      width: 60px;  /* Параметры похожие на игральную карту */
-      height: 90px; 
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #333;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-    .card-item:hover {
-      background: #f8f8f8;
+    /* Зелёный лог (где ходы/карты) */
+    .green-log {
+      background: #2e7d32;   /* тот же цвет */
+      color: #fff;
+      border: 1px solid #4caf50;
+      padding: 1rem;
+      min-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      border-radius: 5px;
     }
 
+    /* Карточный дизайн у выбора карт */
     .card-list {
       margin: 0.5rem 0;
       padding: 0;
@@ -94,7 +86,26 @@
       flex-wrap: wrap;
       gap: 0.5rem;
     }
+    .card-item {
+      background: #fff;
+      color: #333;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      width: 60px;
+      height: 90px;
+      margin: 0.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .card-item:hover {
+      background: #f8f8f8;
+    }
 
+    /* Правила */
     .rules-block h3 {
       margin-top: 0.5rem;
       margin-bottom: 0.3rem;
@@ -105,196 +116,202 @@
       line-height: 1.4;
     }
 
-    /* Блок для козыря, закрепляем сбоку */
+    /* Фиксированный козырь (стилизован как карта) */
     #trump-card {
       position: fixed;
       right: 30px;
       top: 150px;
+
       width: 60px;
       height: 90px;
+
       background: #fff;
       color: #333;
       border: 2px solid #333;
-      border-radius: 8px;
+      border-radius: 10px;
       box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      display: flex;
+
+      display: none; /* Изначально скрыт */
       align-items: center;
       justify-content: center;
       font-weight: bold;
       font-size: 1.2rem;
-      z-index: 999; /* поверх всего */
+
+      z-index: 999;
     }
   </style>
 </head>
 
-
 <body onload="brython()">
-  <header>
-    <h1>Главное меню моей игры</h1>
-  </header>
+<header>
+  <h1>Главное меню моей игры</h1>
+</header>
 
-  <!-- Главное меню -->
-  <div class="container" id="menu-screen">
-    <h2>Главное меню</h2>
-    <button onclick="open_screen('newgame')">Новая игра</button><br>
-    <button onclick="open_screen('achievements')">Достижения</button><br>
-    <button onclick="open_screen('rules')">Правила</button><br>
-    <button onclick="open_screen('settings')">Настройки</button>
+<!-- Козырь (в виде карты), по умолчанию скрыт -->
+<div id="trump-card">?</div>
+
+<!-- Главное меню -->
+<div class="container" id="menu-screen">
+  <h2>Главное меню</h2>
+  <button onclick="open_screen('newgame')">Новая игра</button><br>
+  <button onclick="open_screen('achievements')">Достижения</button><br>
+  <button onclick="open_screen('rules')">Правила</button><br>
+  <button onclick="open_screen('settings')">Настройки</button>
+</div>
+
+<!-- Экран "Новая игра" -->
+<div class="container" id="newgame-screen">
+  <h2>Новая игра</h2>
+  <label>Режим игры:</label><br>
+  <select id="select_mode">
+    <option value="classic">Классический</option>
+    <option value="podkidnoi">Подкидной</option>
+    <option value="perevodnoi">Переводной</option>
+    <option value="jokers">С джокерами</option>
+    <option value="all">Все сразу</option>
+  </select>
+  <br><br>
+
+  <label>
+    <input type="checkbox" id="cb_jokers">
+    Игра с джокерами
+  </label>
+  <br><br>
+
+  <label>
+    <input type="checkbox" id="cb_6plus">
+    Карты только 6..A
+  </label>
+  <br><br>
+
+  <!-- AI выбор (2..4) -->
+  <div id="ai-count-block" style="display:none; margin-bottom:1rem;">
+    <label>Количество игроков (1 реальный + (N-1) ИИ), от 2 до 4:</label><br>
+    <input type="number" id="ai_players_count" value="2" min="2" max="4" />
   </div>
 
-  <!-- Экран "Новая игра" -->
-  <div class="container" id="newgame-screen">
-    <h2>Новая игра</h2>
-    <label>Режим игры:</label><br>
-    <select id="select_mode">
-      <option value="classic">Классический</option>
-      <option value="podkidnoi">Подкидной</option>
-      <option value="perevodnoi">Переводной</option>
-      <option value="jokers">С джокерами</option>
-      <option value="all">Все сразу</option>
-    </select>
+  <!-- мультиплеер (2..10) -->
+  <div id="multi-count-block" style="display:none; margin-bottom:1rem;">
+    <label>Количество игроков (2..10):</label><br>
+    <input type="number" id="multi_players_count" value="4" min="2" max="10" />
     <br><br>
-
+    <p>Мультиплеер: выбрать тип комнаты:</p>
     <label>
-      <input type="checkbox" id="cb_jokers">
-      Игра с джокерами
-    </label>
-    <br><br>
-
-    <label>
-      <input type="checkbox" id="cb_6plus">
-      Карты только 6..A
-    </label>
-    <br><br>
-
-    <!-- AI выбор (2..4) -->
-    <div id="ai-count-block" style="display:none; margin-bottom:1rem;">
-      <label>Количество игроков (1 реальный + (N-1) ИИ), от 2 до 4:</label><br>
-      <input type="number" id="ai_players_count" value="2" min="2" max="4" />
-    </div>
-
-    <!-- мультиплеер (2..10) -->
-    <div id="multi-count-block" style="display:none; margin-bottom:1rem;">
-      <label>Количество игроков (2..10):</label><br>
-      <input type="number" id="multi_players_count" value="4" min="2" max="10" />
-      <br><br>
-      <p>Мультиплеер: выбрать тип комнаты:</p>
-      <label>
-        <input type="radio" name="room_type" value="link" checked>
-        По ссылке
-      </label><br>
-      <label>
-        <input type="radio" name="room_type" value="open">
-        Открытая
-      </label>
-    </div>
-
-    <label>Тип игры:</label><br>
-    <label>
-      <input type="radio" name="game_type" value="ai" checked>
-      Игра с нейросетью
+      <input type="radio" name="room_type" value="link" checked>
+      По ссылке
     </label><br>
     <label>
-      <input type="radio" name="game_type" value="multi">
-      Мультиплеер
+      <input type="radio" name="room_type" value="open">
+      Открытая
     </label>
-    <br><br>
-
-    <button onclick="start_new_game()">Начать</button>
-    <button onclick="back_to_menu()">Отмена</button>
   </div>
 
-  <!-- Экран "Достижения" -->
-  <div class="container" id="achievements-screen">
-    <h2>Достижения</h2>
-    <p>Список достижений пока пуст.</p>
-    <button onclick="back_to_menu()">Назад в меню</button>
+  <label>Тип игры:</label><br>
+  <label>
+    <input type="radio" name="game_type" value="ai" checked>
+    Игра с нейросетью
+  </label><br>
+  <label>
+    <input type="radio" name="game_type" value="multi">
+    Мультиплеер
+  </label>
+  <br><br>
+
+  <button onclick="start_new_game()">Начать</button>
+  <button onclick="back_to_menu()">Отмена</button>
+</div>
+
+<!-- Экран "Достижения" -->
+<div class="container" id="achievements-screen">
+  <h2>Достижения</h2>
+  <p>Список достижений пока пуст.</p>
+  <button onclick="back_to_menu()">Назад в меню</button>
+</div>
+
+<!-- Экран "Правила" -->
+<div class="container" id="rules-screen">
+  <h2>Правила</h2>
+  <div class="rules-block">
+    <p>В игре используется колода из 7 мастей (♠, ♥, ♦, ♣, ⭐, 🌙, ⚜)
+    и при желании 2 особых джокера.
+    Можно играть картами от 2 до A, или только с 6..A, в зависимости от настроек.</p>
+
+    <h3>Классический дурак:</h3>
+    <p>Обычные правила: игроки защищаются и подкидывают, без переводов.
+    Козырная масть определяется случайно. Джокеры не используются,
+    если не отмечено в настройках.</p>
+
+    <h3>Подкидной дурак:</h3>
+    <p>Разрешается подкидывать карты того же достоинства, что уже на столе.
+    Джокеры (если включены) могут использоваться как универсальные карты.</p>
+
+    <h3>Переводной дурак:</h3>
+    <p>Если отбивающийся может перевести ход (есть карта того же достоинства),
+    он переводит атаку на следующего игрока. Наличие 7 мастей и 2 джокеров
+    добавляет вариативности.</p>
+
+    <h3>С джокерами (отдельный режим):</h3>
+    <p>Все классические правила, но джокеры играют особую роль,
+    могут бить любые карты, или даже считаться козырями (в упрощённой версии).
+    Колода снова может быть 2..A или 6..A плюс 2 джокера.</p>
+
+    <h3>Все сразу:</h3>
+    <p>Объединяет механики подкидного, переводного и с джокерами.
+    Это самый сложный вариант — много карт (7 мастей, 2 джокера),
+    можно переводить и подкидывать. Очень хаотично и весело!</p>
   </div>
+  <button onclick="back_to_menu()">Назад в меню</button>
+</div>
 
-  <!-- Экран "Правила" -->
-  <div class="container" id="rules-screen">
-    <h2>Правила</h2>
-    <div class="rules-block">
-      <p>В игре используется колода из 7 мастей (♠, ♥, ♦, ♣, ⭐, 🌙, ⚜)
-      и при желании 2 особых джокера.
-      Можно играть картами от 2 до A, или только с 6..A, в зависимости от настроек.</p>
+<!-- Экран "Настройки" -->
+<div class="container" id="settings-screen">
+  <h2>Настройки</h2>
+  <p>Настройки будут тут...</p>
+  <button onclick="back_to_menu()">Назад в меню</button>
+</div>
 
-      <h3>Классический дурак:</h3>
-      <p>Обычные правила: игроки защищаются и подкидывают, без переводов.
-      Козырная масть определяется случайно. Джокеры не используются,
-      если не отмечено в настройках.</p>
+<!-- Экран "Игра" (для MULTI или AI>2) -->
+<div class="container" id="game-screen">
+  <h2>Игра началась!</h2>
+  <p>Пока тут нет полноценной логики игры. Вы выбрали:</p>
+  <p><strong>Режим:</strong> <span id="chosen_mode"></span></p>
+  <p><strong>Джокеры:</strong> <span id="chosen_jokers"></span></p>
+  <p><strong>Только 6..A:</strong> <span id="chosen_6plus"></span></p>
+  <p><strong>Количество игроков:</strong> <span id="chosen_players"></span></p>
+  <p><strong>Тип игры:</strong> <span id="chosen_type"></span> 
+    ( <span id="chosen_room"></span> )
+  </p>
+  <button onclick="back_to_menu()">Вернуться в меню</button>
+</div>
 
-      <h3>Подкидной дурак:</h3>
-      <p>Разрешается подкидывать карты того же достоинства, что уже на столе.
-      Джокеры (если включены) могут использоваться как универсальные карты.</p>
+<!-- Экран "aifull-screen" — зелёное поле (.game-field) для 2 игроков -->
+<div class="container game-field" id="aifull-screen">
+  <h2>Полная партия с нейросетью (2 игрока)</h2>
+  <p>Кто первый сбросит карты — тот выиграл!</p>
+  <p>Текущий ход: <span id="current-turn"></span></p>
+  <div id="aifull-log" class="green-log"></div>
+  <hr>
+  <p><strong>Ваши карты:</strong></p>
+  <ul class="card-list" id="user-cards-list"></ul>
+  <button onclick="restart_aifull()">Сыграть снова</button>
+  <button onclick="back_to_menu()">Выйти в меню</button>
+</div>
 
-      <h3>Переводной дурак:</h3>
-      <p>Если отбивающийся может перевести ход (есть карта того же достоинства),
-      он переводит атаку на следующего игрока. Наличие 7 мастей и 2 джокеров
-      добавляет вариативности.</p>
+<!-- Экран "aifull-multi-screen" (3..4 игроков) - тоже зелёное поле, 
+     лог тоже зелёный -->
+<div class="container game-field" id="aifull-multi-screen">
+  <h2>Полная партия с несколькими ИИ (3..4 игроков)</h2>
+  <p>Кто первый сбросит карты — тот выиграл!<br>
+     Текущий ход: <span id="multi-turn"></span></p>
+  <div id="aifull-multi-log" class="green-log"></div>
+  <hr>
+  <p><strong>Ваши карты:</strong></p>
+  <ul class="card-list" id="user-multi-cards"></ul>
+  <button onclick="restart_aifull_multi()">Сыграть снова</button>
+  <button onclick="back_to_menu()">Выйти в меню</button>
+</div>
 
-      <h3>С джокерами (отдельный режим):</h3>
-      <p>Все классические правила, но джокеры играют особую роль,
-      могут бить любые карты, или даже считаться козырями (в упрощённой версии).
-      Колода снова может быть 2..A или 6..A плюс 2 джокера.</p>
-
-      <h3>Все сразу:</h3>
-      <p>Объединяет механики подкидного, переводного и с джокерами.
-      Это самый сложный вариант — много карт (7 мастей, 2 джокера),
-      можно переводить и подкидывать. Очень хаотично и весело!</p>
-    </div>
-    <button onclick="back_to_menu()">Назад в меню</button>
-  </div>
-
-  <!-- Экран "Настройки" -->
-  <div class="container" id="settings-screen">
-    <h2>Настройки</h2>
-    <p>Настройки будут тут...</p>
-    <button onclick="back_to_menu()">Назад в меню</button>
-  </div>
-
-  <!-- Экран "Игра" (для MULTI или AI>2) -->
-  <div class="container" id="game-screen">
-    <h2>Игра началась!</h2>
-    <p>Пока тут нет полноценной логики игры. Вы выбрали:</p>
-    <p><strong>Режим:</strong> <span id="chosen_mode"></span></p>
-    <p><strong>Джокеры:</strong> <span id="chosen_jokers"></span></p>
-    <p><strong>Только 6..A:</strong> <span id="chosen_6plus"></span></p>
-    <p><strong>Количество игроков:</strong> <span id="chosen_players"></span></p>
-    <p><strong>Тип игры:</strong> <span id="chosen_type"></span> 
-      ( <span id="chosen_room"></span> )
-    </p>
-    <button onclick="back_to_menu()">Вернуться в меню</button>
-  </div>
-
-  <!-- Экран "aifull-screen" — Полная партия для 2 игроков -->
-  <div class="container" id="aifull-screen">
-    <h2>Полная партия с нейросетью (2 игрока)</h2>
-    <p>Кто первый сбросит карты — тот выиграл!<br>
-       Текущий ход: <span id="current-turn"></span></p>
-    <div id="aifull-log"></div>
-    <hr>
-    <p><strong>Ваши карты:</strong></p>
-    <ul class="card-list" id="user-cards-list"></ul>
-    <button onclick="restart_aifull()">Сыграть снова</button>
-    <button onclick="back_to_menu()">Выйти в меню</button>
-  </div>
-
-  <!-- Экран "aifull-multi-screen" — Полная партия для 3..4 игроков (1 чел + 2..3 ИИ)
-       с той же механикой: атака, защита, подкидывание, перевод -->
-  <div class="container" id="aifull-multi-screen">
-    <h2>Полная партия с несколькими ИИ (3..4 игроков)</h2>
-    <p>Кто первый сбросит карты — тот выиграл!<br>
-       Текущий ход: <span id="multi-turn"></span></p>
-    <div id="aifull-multi-log"></div>
-    <hr>
-    <p><strong>Ваши карты:</strong></p>
-    <ul class="card-list" id="user-multi-cards"></ul>
-    <button onclick="restart_aifull_multi()">Сыграть снова</button>
-    <button onclick="back_to_menu()">Выйти в меню</button>
-  </div>
-
-  <script type="text/python">
+<script type="text/python">
 ############################################
 #        Импорт из browser, random
 ############################################
@@ -305,58 +322,51 @@ import random
 #         ИНИЦИАЛИЗАЦИЯ ЭКРАНОВ
 ############################################
 def switch_view(show_id):
-    all_ids = [
+    screens = [
         "menu-screen","newgame-screen","achievements-screen","rules-screen",
         "settings-screen","game-screen","aifull-screen","aifull-multi-screen"
     ]
-    for i in all_ids:
-        document[i].style.display="none"
-    document[show_id+"-screen"].style.display="block"
+    for s in screens:
+        document[s].style.display = "none"
+    document[show_id].style.display = "block"
 
 def back_to_menu():
-    switch_view("menu")
+    # ПРИ ВОЗВРАТЕ В МЕНЮ СКРЫВАЕМ КОЗЫРЬ:
+    document["trump-card"].style.display = "none"
+    switch_view("menu-screen")
 
 def open_screen(name):
-    switch_view(name)
+    switch_view(name+"-screen")
 
 def on_game_type_change(ev):
     check_game_type()
 
 def check_game_type():
-    """
-    Если game_type=ai => показываем ai-count-block,
-    иначе multi-count-block.
-    """
-    radio_list=document.select("[name='game_type']")
-    chosen="ai"
+    radio_list = document.select("[name='game_type']")
+    chosen = "ai"
     for r in radio_list:
         if r.checked:
-            chosen=r.value
+            chosen = r.value
             break
-    ai_block=document["ai-count-block"]
-    multi_block=document["multi-count-block"]
+    ai_block = document["ai-count-block"]
+    multi_block = document["multi-count-block"]
     if chosen=="ai":
-        ai_block.style.display="block"
-        multi_block.style.display="none"
+        ai_block.style.display = "block"
+        multi_block.style.display = "none"
     else:
-        ai_block.style.display="none"
-        multi_block.style.display="block"
+        ai_block.style.display = "none"
+        multi_block.style.display = "block"
 
 def init():
-    # radio change
     for r in document.select("[name='game_type']"):
         r.bind("change", on_game_type_change)
     check_game_type()
 
 init()
 
-############################################
-#  ВСПОМОГАТЕЛЬНЫЕ
-############################################
 def rank_index(rank):
-    order=["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
-    if rank in order: return order.index(rank)
-    return -1
+    order = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
+    return order.index(rank) if rank in order else -1
 
 def can_defend(card_def, card_atk, trump_suit):
     rd, sd, jd = card_def
@@ -367,13 +377,16 @@ def can_defend(card_def, card_atk, trump_suit):
         return True
     if ja:
         return False
-    is_trump_def=(sd==trump_suit)
-    is_trump_atk=(sa==trump_suit)
+
+    is_trump_def = (sd == trump_suit)
+    is_trump_atk = (sa == trump_suit)
+
     if is_trump_def and not is_trump_atk:
         return True
     if not is_trump_def and is_trump_atk:
         return False
-    if sd==sa:
+
+    if sd == sa:
         return rank_index(rd)>rank_index(ra)
     return False
 
@@ -384,9 +397,9 @@ def draw_until_6(hand, deck):
 
 def create_deck(only_6plus, with_jokers):
     suits=["♠","♥","♦","♣","⭐","🌙","⚜"]
-    ranks_all=[str(n) for n in range(2,11)]+["J","Q","K","A"]
+    ranks_all=[str(n) for n in range(2,11)] + ["J","Q","K","A"]
     if only_6plus:
-        ranks_all=[r for r in ranks_all if r not in["2","3","4","5"]]
+        ranks_all=[r for r in ranks_all if r not in ["2","3","4","5"]]
     d=[]
     for s in suits:
         for r in ranks_all:
@@ -396,43 +409,56 @@ def create_deck(only_6plus, with_jokers):
         d.append(("Joker-4","JokerSuit",True))
     return d
 
-############################################
-# 1) ПОЛНАЯ ПАРТИЯ (2 ИГРОКА)
-############################################
-deck=[]
-AI_cards=[]
-user_cards=[]
-trump_suit=""
-current_attacker="AI"
-log_lines=[]
-allow_user_click=False
+###################### 2 ИГРОКА ######################
+deck = []
+AI_cards = []
+user_cards = []
+trump_suit = ""
+current_attacker = "AI"
+log_lines = []
+allow_user_click = False
 
 def start_aifull_game(only_6plus, with_jokers):
-    global deck,AI_cards,user_cards,trump_suit,current_attacker,log_lines,allow_user_click
-    deck=create_deck(only_6plus,with_jokers)
+    global deck, AI_cards, user_cards, trump_suit, current_attacker, log_lines, allow_user_click
+    deck=create_deck(only_6plus, with_jokers)
     random.shuffle(deck)
+
     AI_cards=deck[:6]
     user_cards=deck[6:12]
     del deck[:12]
+
     suits=["♠","♥","♦","♣","⭐","🌙","⚜"]
-    trump_suit=random.choice(suits)
+    trump_suit = random.choice(suits)
+
     current_attacker="AI"
+
+    # ИЗМЕНЯЕМ: НЕ пишем "Козырь: {trump_suit}" в логе,
+    # просто "Начинаем партию (2 игрока)."
+    # (Мы не удаляем строку, а перезаписываем)
     log_lines=[f"Начинаем партию (2 игрока). Козырь: {trump_suit}"]
+    log_lines[0] = "Начинаем партию (2 игрока)."
+
     allow_user_click=False
+
+    document["trump-card"].innerHTML = f"<div style='font-size:1.5rem;'>{trump_suit}</div>"
+    document["trump-card"].style.display = "block"
+
     ai_attack()
+    switch_view("aifull-screen")
     update_aifull_ui()
 
 def ai_attack():
     global AI_cards, log_lines, allow_user_click
-    if len(AI_cards)==0:return
+    if len(AI_cards)==0:
+        return
     atk_card=AI_cards[0]
     log_lines.append(f"(AI атакует) => {atk_card}")
     allow_user_click=True
 
 def update_aifull_ui():
-    # Лог
-    document["aifull-log"].innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
-    # Текущий ход
+    aifull_log_div = document["aifull-log"]
+    aifull_log_div.innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
+
     turn_text="AI" if current_attacker=="AI" else "Вы"
     document["current-turn"].textContent=turn_text
 
@@ -449,21 +475,22 @@ def update_aifull_ui():
 
     if len(AI_cards)==0:
         log_lines.append("AI сбросил все карты — AI выиграл!")
-        document["aifull-log"].innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
+        aifull_log_div.innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
         return
     if len(user_cards)==0:
         log_lines.append("Вы сбросили все карты — вы победили!")
-        document["aifull-log"].innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
+        aifull_log_div.innerHTML="<pre>"+"\n".join(log_lines)+"</pre>"
         return
 
 def handle_card_click(idx):
-    global deck,AI_cards,user_cards,trump_suit,current_attacker,log_lines,allow_user_click
-    if not allow_user_click:return
-    if idx<0 or idx>=len(user_cards):return
+    global deck, AI_cards, user_cards, trump_suit, current_attacker, log_lines, allow_user_click
+    if not allow_user_click:
+        return
+    if idx<0 or idx>=len(user_cards):
+        return
 
     c=user_cards[idx]
     if current_attacker=="AI":
-        # защищаемся
         atk_card=AI_cards[0]
         log_lines.append(f"Вы отбиваетесь {c} от {atk_card}...")
         if can_defend(c,atk_card,trump_suit):
@@ -472,7 +499,7 @@ def handle_card_click(idx):
             user_cards.pop(idx)
             current_attacker="USER"
         else:
-            log_lines.append("Не удалось отбиться, вы берёте карту AI.")
+            log_lines.append("Не отбились, вы берёте карту AI.")
             user_cards.append(atk_card)
             AI_cards.pop(0)
         allow_user_click=False
@@ -489,10 +516,8 @@ def handle_card_click(idx):
             log_lines.append("Теперь ваш ход, атакуйте.")
         update_aifull_ui()
     else:
-        # current_attacker=="USER"
         log_lines.append(f"Вы атакуете {c}...")
         user_cards.pop(idx)
-        # AI ищет карту
         def_idx=None
         for i,cardAi in enumerate(AI_cards):
             if can_defend(cardAi,c,trump_suit):
@@ -522,9 +547,7 @@ def restart_aifull():
     sixplus_checked=document["cb_6plus"].checked
     start_aifull_game(sixplus_checked,jokers_checked)
 
-############################################
-# 2) ПОЛНАЯ ПАРТИЯ (3..4 ИГРОКА)
-############################################
+################## 3..4 ИГРОКОВ (aifull-multi) ##################
 n_players=3
 hands=[]
 deck_multi=[]
@@ -532,21 +555,16 @@ trump_multi=""
 cur_attacker=0
 log_multi=[]
 allow_click_multi=False
-user_idx=0
+
+def start_aifull_multi(only_6plus, with_jokers, total):
+    start_aifull_multi_game(only_6plus, with_jokers, total)
 
 def start_aifull_multi_game(only_6plus, with_jokers, total_players):
-    """
-    Создаём колоду, раздаём 3..4 игрокам:
-      hands[0] = user, hands[1..] = AI
-    Начинаем с attacker=1 (AI).
-    Логика аналогична 2 игрокам, но defender=(attacker+1)%n,
-    success => roles swap, fail => defender takes card.
-    allow_click_multi=False => AI auto, true => user defends/attacks.
-    """
-    global n_players,hands,deck_multi,trump_multi,cur_attacker,log_multi,allow_click_multi
+    global n_players, hands, deck_multi, trump_multi, cur_attacker, log_multi, allow_click_multi
     n_players=total_players
-    deck_multi=create_deck(only_6plus,with_jokers)
+    deck_multi=create_deck(only_6plus, with_jokers)
     random.shuffle(deck_multi)
+
     hands=[]
     offset=0
     for i in range(n_players):
@@ -554,23 +572,31 @@ def start_aifull_multi_game(only_6plus, with_jokers, total_players):
         offset+=6
         hands.append(h)
     deck_multi=deck_multi[offset:]
+
     suits=["♠","♥","♦","♣","⭐","🌙","⚜"]
     trump_multi=random.choice(suits)
-    cur_attacker=1 # AI1
+
+    # ИЗМЕНЯЕМ: НЕ пишем "... Козырь: {trump_multi}" в логе;
+    # мы не удаляем строчку, а перезаписываем:
     log_multi=[f"Начинаем (1чел + {n_players-1} ИИ). Козырь: {trump_multi}"]
+    log_multi[0] = f"Начинаем (1чел + {n_players-1} ИИ)."
+
+    document["trump-card"].innerHTML = f"<div style='font-size:1.5rem;'>{trump_multi}</div>"
+    document["trump-card"].style.display = "block"
+
+    cur_attacker=1
     allow_click_multi=False
 
-    # AI атакует
     ai_multi_attack(cur_attacker)
     update_aifull_multi_ui()
+    switch_view("aifull-multi-screen")
 
 def update_aifull_multi_ui():
-    global log_multi, cur_attacker,hands, allow_click_multi,n_players
+    global log_multi, cur_attacker, hands
     document["aifull-multi-log"].innerHTML="<pre>"+"\n".join(log_multi)+"</pre>"
-    turn_text=f"Игрок{cur_attacker}" if cur_attacker!=0 else "Вы"
+    turn_text=f"AI[{cur_attacker}]" if cur_attacker!=0 else "Вы"
     document["multi-turn"].textContent=turn_text
 
-    # Ваши карты = hands[0]
     ul=document["user-multi-cards"]
     ul.clear()
     for i,c in enumerate(hands[0]):
@@ -582,7 +608,6 @@ def update_aifull_multi_ui():
         li.bind("click", on_click)
         ul.appendChild(li)
 
-    # Проверка конца
     for i in range(n_players):
         if len(hands[i])==0:
             if i==0:
@@ -594,22 +619,16 @@ def update_aifull_multi_ui():
             return
 
 def handle_multi_card_click(idx):
-    """
-    Если cur_attacker=0 => вы атакуете.
-    Иначе если defender=0 => вы защищаетесь.
-    (defender=(attacker+1)%n).
-    """
-    global allow_click_multi,hands,cur_attacker,deck_multi,log_multi,trump_multi
+    global allow_click_multi,hands,cur_attacker,deck_multi,log_multi,trump_multi,n_players
     if not allow_click_multi:return
     if idx<0 or idx>=len(hands[0]):return
 
     selected_card=hands[0][idx]
     defender=(cur_attacker+1)%n_players
+
     if cur_attacker==0:
-        # Вы атакующий
         log_multi.append(f"Вы атакуете {selected_card}...")
         hands[0].pop(idx)
-        # AI tries defend
         def_card=None
         def_idx=None
         for i,c in enumerate(hands[defender]):
@@ -622,27 +641,21 @@ def handle_multi_card_click(idx):
             hands[defender].pop(def_idx)
             cur_attacker=defender
             allow_click_multi=False
-            # AI next attack
             do_multi_draw()
             ai_multi_attack(cur_attacker)
         else:
             log_multi.append(f"AI[{defender}] НЕ отбился, берёт вашу карту.")
             hands[defender].append(selected_card)
-            # attacker stays you => allow_click_multi stays True
             do_multi_draw()
         update_aifull_multi_ui()
     else:
-        # AI атакует -> defender=you?
         if defender==0:
-            # Вы защищаетесь
             atk_card=hands[cur_attacker][0]
             log_multi.append(f"Вы пытаетесь отбиться {selected_card} от {atk_card}...")
             if can_defend(selected_card,atk_card,trump_multi):
                 log_multi.append("Успешно отбились!")
                 hands[cur_attacker].pop(0)
                 hands[0].pop(idx)
-                # roles swap
-                oldAtk=cur_attacker
                 cur_attacker=0
                 allow_click_multi=True
                 log_multi.append("Теперь ваш ход (атакуйте).")
@@ -650,34 +663,25 @@ def handle_multi_card_click(idx):
                 log_multi.append("Не отбились, вы берёте карту AI.")
                 hands[0].append(atk_card)
                 hands[cur_attacker].pop(0)
-                # attacker stays same
                 allow_click_multi=False
             do_multi_draw()
             if cur_attacker!=0:
-                # AI still attacker => next attack
                 ai_multi_attack(cur_attacker)
             update_aifull_multi_ui()
         else:
-            # AI vs AI? (вы clicked card?? Maybe skip? 
+            # AI vs AI
             pass
 
 def ai_multi_attack(att_idx):
-    """
-    AI att_idx атакует (hands[att_idx][0]), defender=(att_idx+1)%n
-    Если defender=0 => allow_click_multi=True
-    иначе AI vs AI
-    """
-    global hands, deck_multi, log_multi, allow_click_multi, cur_attacker,n_players
-    if len(hands[att_idx])==0:
-        return
+    global hands, deck_multi, log_multi, allow_click_multi, cur_attacker, n_players, trump_multi
+    if len(hands[att_idx])==0:return
     atk_card=hands[att_idx][0]
     df=(att_idx+1)%n_players
     log_multi.append(f"AI[{att_idx}] атакует {atk_card} -> defender= player[{df}]")
+
     if df==0:
-        # user defends
         allow_click_multi=True
     else:
-        # AI vs AI (упрощённо)
         def_i=None
         for i,c in enumerate(hands[df]):
             if can_defend(c,atk_card,trump_multi):
@@ -688,73 +692,34 @@ def ai_multi_attack(att_idx):
             log_multi.append(f"AI[{df}] отбивается {def_card} — успешно!")
             hands[df].pop(def_i)
             hands[att_idx].pop(0)
-            # swap roles
             cur_attacker=df
         else:
-            log_multi.append(f"AI[{df}] не отбился, берёт карту {atk_card}")
+            log_multi.append(f"AI[{df}] не отбился, берёт {atk_card}")
             hands[df].append(atk_card)
             hands[att_idx].pop(0)
         do_multi_draw()
         if cur_attacker!=df:
-            # attacker remains
             if len(hands[att_idx])>0:
                 ai_multi_attack(att_idx)
         else:
-            # new attacker => if it's user => allow
             if cur_attacker==0:
                 allow_click_multi=True
                 log_multi.append("Теперь ваш ход (вы атакующий).")
             else:
-                # AI attacks again
                 ai_multi_attack(cur_attacker)
 
 def do_multi_draw():
-    # attacker draws, then next, etc. 
-    global hands, deck_multi, cur_attacker,n_players
+    global hands, deck_multi, cur_attacker, n_players
     order=[cur_attacker]
     for i in range(n_players):
         if i!=cur_attacker:
             order.append(i)
     for idx in order:
-        hands[idx]=draw_until_6(hands[idx],deck_multi)
-
-def update_aifull_multi_ui():
-    global log_multi, cur_attacker,hands
-    document["aifull-multi-log"].innerHTML="<pre>"+"\n".join(log_multi)+"</pre>"
-    turn_text = (f"AI[{cur_attacker}]" if cur_attacker!=0 else "Вы")
-    document["multi-turn"].textContent=turn_text
-    ul=document["user-multi-cards"]
-    ul.clear()
-    for i,c in enumerate(hands[0]):
-        li=document.createElement("li")
-        li.classList.add("card-item")
-        li.innerHTML=str(c)
-        def on_click(ev, idx=i):
-            handle_multi_card_click(idx)
-        li.bind("click", on_click)
-        ul.appendChild(li)
-
-    # проверяем конец
-    for i in range(len(hands)):
-        if len(hands[i])==0:
-            if i==0:
-                log_multi.append("Вы сбросили все карты — Победа!")
-            else:
-                log_multi.append(f"AI[{i}] сбросил все карты — Он выиграл!")
-            log_multi.append("Игра завершена.")
-            document["aifull-multi-log"].innerHTML="<pre>"+"\n".join(log_multi)+"</pre>"
-            return
-
-def start_aifull_multi(only_6plus, with_jokers, total):
-    """
-    Запускает партию 3..4 игроков (1 чел + 2..3 ИИ)
-    """
-    start_aifull_multi_game(only_6plus, with_jokers, total)
-    switch_view("aifull-multi")
+        hands[idx]=draw_until_6(hands[idx], deck_multi)
 
 def restart_aifull_multi():
-    jok=document["cb_jokers"].checked
-    sx=document["cb_6plus"].checked
+    jokers_checked=document["cb_jokers"].checked
+    sixplus_checked=document["cb_6plus"].checked
     ai_str=document["ai_players_count"].value
     try:
         ai_num=int(ai_str)
@@ -762,12 +727,9 @@ def restart_aifull_multi():
         ai_num=3
     if ai_num<3: ai_num=3
     if ai_num>4: ai_num=4
-    start_aifull_multi_game(sx, jok, ai_num)
-    switch_view("aifull-multi-screen")
+    start_aifull_multi_game(sixplus_checked, jokers_checked, ai_num)
 
-############################################
-#    Запуск игры из "Новая игра"
-############################################
+############################ ЗАПУСК NEW GAME ###########################
 def start_new_game():
     mode_value=document["select_mode"].value
     jokers_checked=document["cb_jokers"].checked
@@ -788,16 +750,12 @@ def start_new_game():
             ai_count=2
         if ai_count<2: ai_count=2
         if ai_count>4: ai_count=4
+
         if ai_count==2:
-            # 2 player
-            switch_view("aifull")
             start_aifull_game(sixplus_checked,jokers_checked)
         else:
-            # 3 or 4
             start_aifull_multi(sixplus_checked,jokers_checked,ai_count)
-        return
     else:
-        # multiplayer
         multi_count_str=document["multi_players_count"].value
         try:
             multi_count=int(multi_count_str)
@@ -806,7 +764,6 @@ def start_new_game():
         if multi_count<2: multi_count=2
         if multi_count>10: multi_count=10
 
-        # room_type => link or open
         rlist=document.select("[name='room_type']")
         rt="link"
         for rr in rlist:
@@ -814,7 +771,6 @@ def start_new_game():
                 rt=rr.value
                 break
 
-        # переходим на game-screen
         document["chosen_mode"].textContent=mode_value
         document["chosen_jokers"].textContent="Да" if jokers_checked else "Нет"
         document["chosen_6plus"].textContent="Да" if sixplus_checked else "Нет"
@@ -825,18 +781,21 @@ def start_new_game():
         else:
             rtxt="Открытая"
         document["chosen_room"].textContent=rtxt
-        switch_view("game")
+
+        switch_view("game-screen")
 
 ############################################
-#   Привязка window
+# СВЯЗЫВАЕМ Python-ФУНКЦИИ С window, ЧТОБЫ КНОПКИ РАБОТАЛИ
 ############################################
-window.open_screen= open_screen
-window.back_to_menu= back_to_menu
-window.start_new_game= start_new_game
-window.restart_aifull= restart_aifull
-window.restart_aifull_multi= restart_aifull_multi
+from browser import window
 
-switch_view("menu")
-  </script>
+window.open_screen = open_screen
+window.back_to_menu = back_to_menu
+window.start_new_game = start_new_game
+window.restart_aifull = restart_aifull
+window.restart_aifull_multi = restart_aifull_multi
+############################################
+
+</script>
 </body>
 </html>
