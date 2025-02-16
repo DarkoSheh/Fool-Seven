@@ -30,8 +30,6 @@ from folder3.multi_module import (
 def on_game_type_change(ev):
     check_game_type()
 
-from browser import document, window
-
  radio_list = document.select("[name='game_type']")
     chosen = "ai"  # значение по умолчанию
     for r in radio_list:
