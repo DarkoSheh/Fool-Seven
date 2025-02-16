@@ -46,8 +46,9 @@ def check_game_type():
         ai_block.style.display = "none"
         multi_block.style.display = "block"
 
+
 def init():
-    # ВАЖНО: Исправляем опечатку в строке ниже
+    # Внимание: здесь важно правильно закрыть кавычки и скобки
     for r in document.select("[name='game_type']"):
         r.bind("change", on_game_type_change)
     check_game_type()
