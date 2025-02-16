@@ -3,14 +3,17 @@
 from browser import document, window
 
 # Импортируем базовые вещи
+from folder1 import base_module
+# чтобы не путаться, импортируем целиком base_module — так мы можем явно обращаться 
+# к base_module.player_name и быть уверенными, что меняем ту же переменную.
+
 from folder1.base_module import (
-    player_name, switch_view, open_screen, back_to_menu,
+    switch_view, open_screen, back_to_menu,
     patched_set_action_message, patched_clear_action,
-    create_deck, rank_index,
+    create_deck, rank_index
 )
 
 # Импортируем функции из модуля AI (2 игрока)
-#   Вот "команда", которую мы добавили, чтобы вызвать код другого файла:
 from folder2.ai_module import (
     start_aifull_game, restart_aifull
 )
@@ -21,7 +24,7 @@ from folder3.multi_module import (
 )
 
 ########################################################
-# Остальной код из исходника: методы init(), start_new_game(), save_player_name()
+#       Основные функции управления (init, start_new_game, ...)
 ########################################################
 
 def on_game_type_change(ev):
@@ -36,7 +39,7 @@ def check_game_type():
             break
     ai_block = document["ai-count-block"]
     multi_block = document["multi-count-block"]
-    if chosen=="ai":
+    if chosen == "ai":
         ai_block.style.display = "block"
         multi_block.style.display = "none"
     else:
@@ -44,75 +47,82 @@ def check_game_type():
         multi_block.style.display = "block"
 
 def init():
-    for r in document.select("[name='game_type']):
+    # ВАЖНО: Исправляем опечатку в строке ниже
+    for r in document.select("[name='game_type']"):
         r.bind("change", on_game_type_change)
     check_game_type()
 
 init()
 
 def save_player_name():
-    global player_name
+    # Меняем player_name в самом base_module
     inp = document["player_name_input"].value
     if inp.strip():
-        player_name = inp.strip()
+        base_module.player_name = inp.strip()
     back_to_menu()
 
 window.save_player_name = save_player_name
 
 def start_new_game():
-    mode_value=document["select_mode"].value
-    jokers_checked=document["cb_jokers"].checked
-    sixplus_checked=document["cb_6plus"].checked
+    mode_value = document["select_mode"].value
+    jokers_checked = document["cb_jokers"].checked
+    sixplus_checked = document["cb_6plus"].checked
 
-    radio_list=document.select("[name='game_type']")
-    game_type="ai"
+    radio_list = document.select("[name='game_type']")
+    game_type = "ai"
     for r in radio_list:
         if r.checked:
-            game_type=r.value
+            game_type = r.value
             break
 
-    if game_type=="ai":
-        ai_count_str=document["ai_players_count"].value
+    if game_type == "ai":
+        ai_count_str = document["ai_players_count"].value
         try:
-            ai_count=int(ai_count_str)
+            ai_count = int(ai_count_str)
         except:
-            ai_count=2
-        if ai_count<2:ai_count=2
-        if ai_count>4:ai_count=4
-        if ai_count==2:
-            # Вызываем игру "2 игрока"
-            start_aifull_game(sixplus_checked,jokers_checked)
-        else:
-            # Несколько игроков (3-4)
-            start_aifull_multi(sixplus_checked,jokers_checked,ai_count)
-    else:
-        multi_count_str=document["multi_players_count"].value
-        try:
-            multi_count=int(multi_count_str)
-        except:
-            multi_count=4
-        if multi_count<2:multi_count=2
-        if multi_count>10:multi_count=10
+            ai_count = 2
+        if ai_count < 2:
+            ai_count = 2
+        if ai_count > 4:
+            ai_count = 4
 
-        rlist=document.select("[name='room_type']")
-        rt="link"
+        # Запуск игры с ИИ
+        if ai_count == 2:
+            start_aifull_game(sixplus_checked, jokers_checked)
+        else:
+            start_aifull_multi(sixplus_checked, jokers_checked, ai_count)
+
+    else:
+        # Мультиплеер (просто показываем экран "game-screen", 
+        #  как было в исходном коде)
+        multi_count_str = document["multi_players_count"].value
+        try:
+            multi_count = int(multi_count_str)
+        except:
+            multi_count = 4
+        if multi_count < 2:
+            multi_count = 2
+        if multi_count > 10:
+            multi_count = 10
+
+        rlist = document.select("[name='room_type']")
+        rt = "link"
         for rr in rlist:
             if rr.checked:
-                rt=rr.value
+                rt = rr.value
                 break
 
-        document["chosen_mode"].textContent=mode_value
-        document["chosen_jokers"].textContent="Да" if jokers_checked else "Нет"
-        document["chosen_6plus"].textContent="Да" if sixplus_checked else "Нет"
-        document["chosen_players"].textContent=str(multi_count)
-        document["chosen_type"].textContent="Мультиплеер"
-        if rt=="link":
-            rtxt="По ссылке"
+        document["chosen_mode"].textContent = mode_value
+        document["chosen_jokers"].textContent = "Да" if jokers_checked else "Нет"
+        document["chosen_6plus"].textContent = "Да" if sixplus_checked else "Нет"
+        document["chosen_players"].textContent = str(multi_count)
+        document["chosen_type"].textContent = "Мультиплеер"
+        if rt == "link":
+            rtxt = "По ссылке"
         else:
-            rtxt="Открытая"
-        document["chosen_room"].textContent=rtxt
+            rtxt = "Открытая"
+        document["chosen_room"].textContent = rtxt
 
         switch_view("game-screen")
 
 window.start_new_game = start_new_game
-
