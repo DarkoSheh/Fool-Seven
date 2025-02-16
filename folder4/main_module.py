@@ -30,49 +30,29 @@ from folder3.multi_module import (
 def on_game_type_change(ev):
     check_game_type()
 
- radio_list = document.select("[name='game_type']")
-    chosen = "ai"  # значение по умолчанию
+def check_game_type():
+    radio_list = document.select("[name='game_type']")
+    chosen = "ai"
     for r in radio_list:
         if r.checked:
             chosen = r.value
             break
-
     ai_block = document["ai-count-block"]
     multi_block = document["multi-count-block"]
-
     if chosen == "ai":
-        # Показать блок ИИ-игроков
         ai_block.style.display = "block"
-        # Спрятать мультиплеерный блок
         multi_block.style.display = "none"
     else:
         ai_block.style.display = "none"
         multi_block.style.display = "block"
 
-
-def on_game_type_change(ev):
-    """
-    Вызывается при переключении радиокнопки
-    """
-    check_game_type()
-
-
 def init():
-    """
-    Привязка обработчика к каждой радиокнопке
-    + первичная проверка (чтобы при загрузке уже всё верно отображалось).
-    """
-    # Ставим обработчик "on_game_type_change" на каждую радиокнопку name='game_type'
+    # ВАЖНО: Исправляем опечатку в строке ниже
     for r in document.select("[name='game_type']"):
         r.bind("change", on_game_type_change)
-
-    # Сделаем первичную настройку отображения
     check_game_type()
 
-
-# Вызываем init(), чтобы всё заработало после загрузки
 init()
-
 
 def save_player_name():
     # Меняем player_name в самом base_module
@@ -144,12 +124,5 @@ def start_new_game():
         document["chosen_room"].textContent = rtxt
 
         switch_view("game-screen")
-            pass
 
-from browser import window
-window.open_screen = open_screen
-window.back_to_menu = back_to_menu
-window.restart_aifull = restart_aifull
-window.restart_aifull_multi = restart_aifull_multi
-window.save_player_name = save_player_name
 window.start_new_game = start_new_game
