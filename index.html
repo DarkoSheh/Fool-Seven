@@ -1,16 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Test Brython Buttons</title>
+  <title>Моя Игра (Brython) — Несколько ИИ (3–4 игроков), зелёное поле + козырь</title>
+
   <!-- Подключаем Brython -->
   <script src="https://cdn.jsdelivr.net/npm/brython@3/brython.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/brython@3/brython_stdlib.js"></script>
-</head>
-<body onload="brython()">
 
-
-  
   <!-- CSS стили -->
   <style>
     /* Базовые стили */
@@ -66,13 +63,6 @@
     #settings-screen, #game-screen, #aifull-screen, #aifull-multi-screen,
     #profile-screen {
       display: none;
-    }
-
-    #newgame-screen {
-    width: 400px;       /* или 500px, как вам удобнее */
-    min-height: 500px;  /* если нужно задать высоту */
-    margin: 2rem auto;  /* чтобы центрировать */
-    box-sizing: border-box; /* на всякий случай */
     }
 
     /* Зеленое игровое поле на весь экран */
@@ -402,14 +392,5 @@
 <script type="text/python" src="folder3/multi_module.py"></script>
 <script type="text/python" src="folder4/main_module.py"></script>
 
-from browser import window
-window.open_screen = open_screen
-window.back_to_menu = back_to_menu
-window.start_new_game = start_new_game
-window.restart_aifull = restart_aifull
-window.restart_aifull_multi = restart_aifull_multi
-window.save_player_name = save_player_name
-
-  
 </body>
 </html>
