@@ -146,5 +146,6 @@ def start_new_game():
         document["chosen_room"].textContent = rtxt
 
         switch_view("game-screen")
+            pass
 
 window.start_new_game = start_new_game
