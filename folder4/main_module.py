@@ -146,4 +146,10 @@ def start_new_game():
         switch_view("game-screen")
             pass
 
+from browser import window
+window.open_screen = open_screen
+window.back_to_menu = back_to_menu
+window.restart_aifull = restart_aifull
+window.restart_aifull_multi = restart_aifull_multi
+window.save_player_name = save_player_name
 window.start_new_game = start_new_game
